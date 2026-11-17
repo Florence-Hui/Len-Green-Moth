@@ -15,6 +15,8 @@ static void showConfig()
     Serial.println("Amplitude: " + String(WING_CONFIG.FLAP_AMPLITUDE));
     Serial.println("Left Neutral: " + String(WING_CONFIG.LEFT_NEUTRAL_ANGLE));
     Serial.println("Right Neutral: " + String(WING_CONFIG.RIGHT_NEUTRAL_ANGLE));
+    Serial.println("Steering: " + String(WING_CONFIG.STEERING));
+    Serial.println("Quick Return: " + String(WING_CONFIG.QUICK_RETURN ? "Enabled" : "Disabled"));
 
     Serial.print("Waveform: ");
     Serial.println(
@@ -129,6 +131,32 @@ static void processCommand(String command)
 
         WING_CONFIG.RIGHT_NEUTRAL_ANGLE = value;
     }
+    
+    else if (parameter == "STEERING")
+    {
+        if (value < -MAX_STEERING_INPUT ||
+            value > MAX_STEERING_INPUT)
+        {
+            Serial.println("Steering must be between -1.0 and +1.0.");
+            return;
+        }
+
+        WING_CONFIG.STEERING = value;
+    }
+
+    else if (parameter == "QUICK_RETURN")
+    {
+        if (value == 0.0)
+            WING_CONFIG.QUICK_RETURN = false;
+        else if (value == 1.0)
+            WING_CONFIG.QUICK_RETURN = true;
+        else
+        {
+            Serial.println("Quick Return must be 0 (disabled) or 1 (enabled).");
+            return;
+        }
+    }
+    
     else
     {
         Serial.println("Unknown parameter.");

@@ -23,6 +23,8 @@ static unsigned long previousMicros = 0;
 static int lastLeftPulse = -1;
 static int lastRightPulse = -1;
 
+static float currentSteering = 0.0;
+
 static bool initialized = false;
 
 // --------------------------------
@@ -92,6 +94,15 @@ static float triangleWave(float phase)
 static float sineWave(float phase)
 {
     phase = phase - floorf(phase);
+
+    if (WING_CONFIG.QUICK_RETURN)
+    {
+        // Quick return: downstroke is faster than upstroke
+        if (phase < 0.5)
+            phase = phase * 4.0/3.0; // Downstroke: 0.0 to 0.66
+        else
+            phase = 0.5 * 4.0/3.0 + (phase - 0.5) * 0.75; // Upstroke: 0.66 to 1.0
+    }
 
     return sinf((2.0 * PI * phase) - (PI / 2.0));
 }
@@ -164,6 +175,8 @@ void initWingMotion()
 
     phase = 0.75;
 
+    currentSteering = 0.0;
+
     initialized = true;
 }
 
@@ -209,12 +222,47 @@ void updateWingMotion()
     {
         phase = 0.75;
 
+        // Reset applied steering while idle
+        currentSteering = 0.0;
+
         writeLeftServoAngle(WING_CONFIG.LEFT_NEUTRAL_ANGLE);
         writeRightServoAngle(WING_CONFIG.RIGHT_NEUTRAL_ANGLE);
 
         return;
     }
 
+    // --------------------------------
+    // Update steering
+    // --------------------------------
+
+    float targetSteering = WING_CONFIG.STEERING;
+
+    // Constrain requested steering
+    if (targetSteering > MAX_STEERING_INPUT)
+        targetSteering = MAX_STEERING_INPUT;
+
+    if (targetSteering < -MAX_STEERING_INPUT)
+        targetSteering = -MAX_STEERING_INPUT;
+
+    // Apply deadband
+    if (fabsf(targetSteering) < STEERING_DEADBAND)
+        targetSteering = 0.0;
+
+    // Gradually move current steering toward target
+    float maxSteeringChange =
+        STEERING_RAMP_RATE * deltaTime;
+
+    float steeringDifference =
+        targetSteering - currentSteering;
+
+    if (steeringDifference > maxSteeringChange)
+        currentSteering += maxSteeringChange;
+
+    else if (steeringDifference < -maxSteeringChange)
+        currentSteering -= maxSteeringChange;
+
+    else
+        currentSteering = targetSteering;
 
     // Update normalized phase.
 
@@ -224,8 +272,9 @@ void updateWingMotion()
 
     phase = phase - floorf(phase);
 
-
-    // Generate waveform.
+    // --------------------------------
+    // Choose waveform
+    // --------------------------------
 
     float wave;
 
@@ -235,22 +284,59 @@ void updateWingMotion()
         wave = sineWave(phase);
 
 
-    // Calculate angular displacement.
+    // --------------------------------
+    // Calculate steering differential
+    // --------------------------------
 
-    float flapDisplacement = amplitude * wave;
+    // Maximum permitted amplitude difference
+    float maxWingDelta =
+        amplitude * STEERING_DIFF_MAX_FRACTION * 0.5;
 
+    // Available amplitude headroom
+    float upperHeadroom =
+        WING_CONFIG.MAX_FLAP_AMPLITUDE - amplitude;
 
-    // Calculate left and right servo angles.
+    float lowerHeadroom = amplitude;
+
+    // Prevent either wing from exceeding amplitude limits
+    if (upperHeadroom < maxWingDelta)
+        maxWingDelta = upperHeadroom;
+
+    if (lowerHeadroom < maxWingDelta)
+        maxWingDelta = lowerHeadroom;
+
+    // Calculate steering-induced amplitude change
+    float wingDelta =
+        currentSteering * STEERING_GAIN * maxWingDelta;
+
+    // --------------------------------
+    // Calculate individual wing motion
+    // --------------------------------
+
+    float leftAmplitude = amplitude + wingDelta;
+    float rightAmplitude = amplitude - wingDelta;
+
+    float leftFlapDisplacement =
+        leftAmplitude * wave;
+
+    float rightFlapDisplacement =
+        rightAmplitude * wave;
+
+    // --------------------------------
+    // Calculate servo angles
+    // --------------------------------
 
     float leftAngle =
-        WING_CONFIG.LEFT_NEUTRAL_ANGLE + flapDisplacement;
+        WING_CONFIG.LEFT_NEUTRAL_ANGLE +
+        leftFlapDisplacement;
 
     float rightAngle =
-        WING_CONFIG.RIGHT_NEUTRAL_ANGLE - flapDisplacement;
+        WING_CONFIG.RIGHT_NEUTRAL_ANGLE -
+        rightFlapDisplacement;
 
-
-    // Send angles to servo output functions.
-    // Conversion to microseconds happens internally.
+    // --------------------------------
+    // Write servo commands
+    // --------------------------------
 
     writeLeftServoAngle(leftAngle);
     writeRightServoAngle(rightAngle);
