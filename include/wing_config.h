@@ -61,6 +61,9 @@ struct WingConfig
 
     FlapWaveform FLAP_WAVEFORM;
 
+    float LEFT_AMPLITUDE_MULTIPLIER;
+    float RIGHT_AMPLITUDE_MULTIPLIER;
+
     bool QUICK_RETURN; // If true, the downstroke will be faster than the upstroke
 };
 
