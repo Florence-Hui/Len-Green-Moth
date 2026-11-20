@@ -313,8 +313,10 @@ void updateWingMotion()
     // Calculate individual wing motion
     // --------------------------------
 
-    float leftAmplitude = amplitude + wingDelta;
-    float rightAmplitude = amplitude - wingDelta;
+    float leftAmplitude = (amplitude + wingDelta) * 
+        WING_CONFIG.LEFT_AMPLITUDE_MULTIPLIER;
+    float rightAmplitude = (amplitude - wingDelta) *
+        WING_CONFIG.RIGHT_AMPLITUDE_MULTIPLIER;
 
     float leftFlapDisplacement =
         leftAmplitude * wave;

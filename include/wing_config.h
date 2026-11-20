@@ -5,8 +5,8 @@
 // SERVO CONFIGURATION
 // ==========================================
 
-const int LEFT_SERVO_PIN = 9;
-const int RIGHT_SERVO_PIN = 10;
+const int LEFT_SERVO_PIN = 1;
+const int RIGHT_SERVO_PIN = 2;
 
 // --------------------------------
 // Servo angle calibration
@@ -29,11 +29,11 @@ const float RIGHT_SERVO_MAX_ANGLE = 180.0;
 // For particular servos.
 // Units: microseconds (us).
 
-const int LEFT_SERVO_MIN_US = 800;
-const int LEFT_SERVO_MAX_US = 2200;
+const int LEFT_SERVO_MIN_US = 500;
+const int LEFT_SERVO_MAX_US = 2500;
 
-const int RIGHT_SERVO_MIN_US = 800;
-const int RIGHT_SERVO_MAX_US = 2200;
+const int RIGHT_SERVO_MIN_US = 500;
+const int RIGHT_SERVO_MAX_US = 2500;
 
 // ==========================================
 // FLAPPING CONFIGURATION
